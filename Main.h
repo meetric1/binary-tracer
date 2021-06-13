@@ -18,5 +18,5 @@ struct Camera
 };
 
 std::vector<unsigned char> ImageData;
-std::vector<BaseObject> ObjectArray;
+std::vector<std::shared_ptr<BaseObject>> ObjectArray;
 unsigned int Res[2];
