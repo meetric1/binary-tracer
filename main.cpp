@@ -67,7 +67,7 @@ HitResult TraceAll(Ray ray)
 
 	for (size_t i = 0U; i < ObjectArray.size(); i++) {
 		HitResult hit;
-		if (ObjectArray[i].intersect(ray, hit) && hit.t < closestHit.t) {
+		if (ObjectArray[i]->intersect(ray, hit) && hit.t < closestHit.t) {
 				closestHit = hit;
 		}
 
@@ -99,12 +99,12 @@ GMOD_MODULE_OPEN()
 	// Objects
 	{
 		Plane p{ vec3(0.f, -5.f, 0.f), vec3(0.f, 1.f, 0.f) };
-		ObjectArray.push_back(p);
+		ObjectArray.push_back(std::make_shared<BaseObject>(p));
 	}
 
 	for(int i = 0; i < 10; i++) {
 		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10 - 25, -5, cos(deg2rad(i * 36)) * 10), vec3(), vec3(i * 10), 3.f};
-		ObjectArray.push_back(s);
+		ObjectArray.push_back(std::make_shared<BaseObject>(s));
 	}
 
 	glm::mat3x3 matrix = glm::orientation(Cam.dir, vec3(0.f, 0.f, 1.f));
