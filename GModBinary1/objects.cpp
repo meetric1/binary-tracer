@@ -2,8 +2,8 @@
 
 using glm::vec3;
 
-Sphere::Sphere(vec3 position, vec3 angle, vec3 color, float radius) : BaseObject(position, angle, color), rad(radius) {}
-bool Sphere::intersect(const Ray ray, HitResult hitOut) const
+Sphere::Sphere(vec3 position, vec3 angle, vec3 colour, float radius) : BaseObject(position, angle, colour), rad(radius) {}
+bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 {
 	using glm::dot;
 	vec3 rayPosLocal = ray.pos - pos;
@@ -14,7 +14,7 @@ bool Sphere::intersect(const Ray ray, HitResult hitOut) const
 
 	float discriminant = b * b - 4 * a * c;
 	if (discriminant <= 0.f) return false;
-
+	
 	float t;
 	float t1 = (-b - sqrt(discriminant)) / (2.f * a);
 	float t2 = (-b + sqrt(discriminant)) / (2.f * a);
@@ -27,12 +27,12 @@ bool Sphere::intersect(const Ray ray, HitResult hitOut) const
 
 	hitOut.t = t;
 	hitOut.normal = glm::unit_vector(rayPosLocal + t * ray.dir);
-	hitOut.color = color;
+	hitOut.color = col;
 	return true;
 }
 
-Plane::Plane(vec3 position, vec3 angle) : BaseObject(position, angle) {}
-bool Plane::intersect(const Ray ray, HitResult hitOut) const
+Plane::Plane(vec3 position, vec3 angle, vec3 colour) : BaseObject(position, angle, colour) {}
+bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 {
 	float A = glm::dot(ang, ray.dir);
 

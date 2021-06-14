@@ -67,8 +67,8 @@ HitResult TraceAll(Ray ray)
 
 	for (size_t i = 0U; i < ObjectArray.size(); i++) {
 		HitResult hit;
-		if (ObjectArray[i].intersect(ray, hit) && hit.t < closestHit.t) {
-			closestHit = hit;
+		if (ObjectArray[i]->intersect(ray, hit) && hit.t < closestHit.t) {
+				closestHit = hit;
 		}
 
 	}
@@ -89,7 +89,7 @@ GMOD_MODULE_OPEN()
 	// Resolution
 	Res[0] = 1920;         // X res
 	Res[1] = 1080;         // Y res
-
+	
 	ImageData = std::vector<unsigned char>(Res[0] * Res[1] * 3U, 0);
 
 	// Camera
@@ -99,12 +99,12 @@ GMOD_MODULE_OPEN()
 	// Objects
 	{
 		Plane p{ vec3(0.f, -5.f, 0.f), vec3(0.f, 1.f, 0.f) };
-		ObjectArray.push_back(p);
+		ObjectArray.push_back(std::make_shared<BaseObject>(p));
 	}
 
-	for (int i = 0; i < 10; i++) {
-		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10 - 25, -5, cos(deg2rad(i * 36)) * 10), vec3(), vec3(i * 10), 3.f };
-		ObjectArray.push_back(s);
+	for(int i = 0; i < 10; i++) {
+		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10 - 25, -5, cos(deg2rad(i * 36)) * 10), vec3(), vec3(i * 10), 3.f};
+		ObjectArray.push_back(std::make_shared<BaseObject>(s));
 	}
 
 	glm::mat3x3 matrix = glm::orientation(Cam.dir, vec3(0.f, 0.f, 1.f));
@@ -122,7 +122,7 @@ GMOD_MODULE_OPEN()
 
 			Ray ray{ Cam.pos, vec3(xDir, yDir, 1) * matrix };
 
-			HitResult hitData = TraceAll(ray);
+			HitResult hit = TraceAll(ray);
 
 			vec3 FinalColor = vec3(168, 219, 243);
 			if (hitData.hit) {
@@ -132,7 +132,7 @@ GMOD_MODULE_OPEN()
 			writePixel(x, y, FinalColor.x, FinalColor.y, FinalColor.z);
 		}
 	}
-
+	
 	bool success = ppmWrite("C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\renders\\render6.ppm", ImageData.data(), Res);
 	if (success) {
 		double RENDER_END_TIME = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - RENDER_START_TIME).count();
