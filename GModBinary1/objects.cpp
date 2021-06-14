@@ -26,7 +26,7 @@ bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 	else t = t1 < t2 ? t1 : t2;
 
 	hitOut.t = t;
-	hitOut.normal = glm::unit_vector(rayPosLocal + t * ray.dir);
+	hitOut.normal = glm::normalize(rayPosLocal + t * ray.dir);
 	hitOut.color = col;
 	return true;
 }

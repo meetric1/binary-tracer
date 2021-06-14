@@ -70,7 +70,6 @@ HitResult TraceAll(Ray ray)
 		if (ObjectArray[i]->intersect(ray, hit) && hit.t < closestHit.t) {
 				closestHit = hit;
 		}
-
 	}
 
 	closestHit.pos = ray.pos + ray.dir * closestHit.t; // calculate position at the end rather than every object (way faster)
@@ -98,13 +97,13 @@ GMOD_MODULE_OPEN()
 
 	// Objects
 	{
-		Plane p{ vec3(0.f, -5.f, 0.f), vec3(0.f, 1.f, 0.f) };
-		ObjectArray.push_back(std::make_shared<BaseObject>(p));
+		Plane p(vec3(0.f, -5.f, 0.f), vec3(0.f, 1.f, 0.f), vec3(1.f));
+		ObjectArray.push_back(std::make_shared<Plane>(p));
 	}
 
 	for(int i = 0; i < 10; i++) {
 		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10 - 25, -5, cos(deg2rad(i * 36)) * 10), vec3(), vec3(i * 10), 3.f};
-		ObjectArray.push_back(std::make_shared<BaseObject>(s));
+		ObjectArray.push_back(std::make_shared<Sphere>(s));
 	}
 
 	glm::mat3x3 matrix = glm::orientation(Cam.dir, vec3(0.f, 0.f, 1.f));
@@ -125,8 +124,8 @@ GMOD_MODULE_OPEN()
 			HitResult hit = TraceAll(ray);
 
 			vec3 FinalColor = vec3(168, 219, 243);
-			if (hitData.hit) {
-				FinalColor = hitData.color;
+			if (hit.hit) {
+				FinalColor = hit.color;
 			}
 
 			writePixel(x, y, FinalColor.x, FinalColor.y, FinalColor.z);
