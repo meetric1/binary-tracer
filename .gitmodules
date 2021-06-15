@@ -2,3 +2,6 @@
 	path = GModBinary1/gmod-module-base
 	url = https://github.com/Facepunch/gmod-module-base.git
 	branch = development
+[submodule "GModBinary1/glm"]
+	path = GModBinary1/glm
+	url = https://github.com/g-truc/glm.git
