@@ -35,7 +35,4 @@
 .vs
 
 # Build Directories
-Debug
 Release
-VisTrace/Debug
-VisTrace/Release
