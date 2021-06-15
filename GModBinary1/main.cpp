@@ -5,6 +5,8 @@
 #include "GarrysMod/Lua/Interface.h"
 #include "glm/gtx/rotate_vector.hpp"
 
+#include "lighting.h"
+
 using namespace GarrysMod::Lua;
 using glm::vec3;
 
@@ -62,9 +64,7 @@ float deg2rad(float degrees)
 
 std::string vec2string(vec3 v)
 {
-	return std::to_string(v.x) + "," + std::to_string(v.y) + "," + std::to_string(v.z);
-
-
+	return std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z);
 }
 
 HitResult TraceAll(Ray ray, ILuaBase* LuaBase)
@@ -82,7 +82,6 @@ HitResult TraceAll(Ray ray, ILuaBase* LuaBase)
 	closestHit.pos = ray.pos + ray.dir * closestHit.t; // calculate position at the end rather than every object (way faster)
 	return closestHit;
 }
-
 
 // Called when the module is loaded
 GMOD_MODULE_OPEN()
@@ -132,7 +131,7 @@ GMOD_MODULE_OPEN()
 
 			vec3 FinalColor = vec3(168, 219, 243);
 			if (hit.hit) {
-				FinalColor = hit.color;
+				FinalColor = hit.colour;
 			}
 
 			writePixel(x, y, FinalColor.x, FinalColor.y, FinalColor.z);
