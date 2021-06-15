@@ -155,12 +155,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="lighting.cpp" />
     <ClCompile Include="main.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Programming\Gmod\gmod_module\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="objects.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="lighting.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="objects.h" />
     <ClInclude Include="types.h" />
