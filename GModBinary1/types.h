@@ -10,7 +10,7 @@ struct HitResult
 	float t;
 	glm::vec3 normal; 
 	glm::vec3 pos;
-	glm::vec3 colour;
+	glm::vec3 color;
 };
 
 struct Ray
@@ -26,6 +26,6 @@ public:
 	glm::vec3 ang;
 	glm::vec3 col;
 
-	BaseObject(glm::vec3 position, glm::vec3 angle, glm::vec3 colour) : pos(position), ang(angle), col(colour) {}
+	BaseObject(glm::vec3 position, glm::vec3 angle, glm::vec3 color) : pos(position), ang(angle), col(color) {}
 	virtual bool intersect(const Ray& ray, HitResult& hitOut) const = 0;
 };

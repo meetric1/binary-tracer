@@ -113,7 +113,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)GModBinary1\gmod-module-base\include;$(SolutionDir)GModBinary1\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GModBinary1\bvh\include;$(SolutionDir)GModBinary1\bvh\include;$(SolutionDir)GModBinary1\gmod-module-base\include;$(SolutionDir)GModBinary1\glm</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,7 +145,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)GModBinary1\gmod-module-base\include;$(SolutionDir)GModBinary1\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GModBinary1\bvh\include;$(SolutionDir)GModBinary1\gmod-module-base\include;$(SolutionDir)GModBinary1\glm</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

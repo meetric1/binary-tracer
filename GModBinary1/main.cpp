@@ -4,6 +4,7 @@
 
 #include "GarrysMod/Lua/Interface.h"
 #include "glm/gtx/rotate_vector.hpp"
+#include "bvh/bvh.hpp"
 
 #include "lighting.h"
 
@@ -78,7 +79,11 @@ HitResult TraceAll(Ray ray, ILuaBase* LuaBase)
 			closestHit = hit;
 		}
 	}
-
+	if (closestHit.hit)
+	{
+		closestHit.color = closestHit.color * calculateLighting(closestHit);
+	}
+	
 	closestHit.pos = ray.pos + ray.dir * closestHit.t; // calculate position at the end rather than every object (way faster)
 	return closestHit;
 }
@@ -131,7 +136,7 @@ GMOD_MODULE_OPEN()
 
 			vec3 FinalColor = vec3(168, 219, 243);
 			if (hit.hit) {
-				FinalColor = hit.colour;
+				FinalColor = hit.color;
 			}
 
 			writePixel(x, y, FinalColor.x, FinalColor.y, FinalColor.z);

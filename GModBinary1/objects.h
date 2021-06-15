@@ -14,6 +14,6 @@ class Sphere : public BaseObject
 class Plane : public BaseObject
 {
 	public:
-		Plane(glm::vec3 position, glm::vec3 angle, glm::vec3 colour = glm::vec3(1.f));
+		Plane(glm::vec3 position, glm::vec3 angle, glm::vec3 color = glm::vec3(1.f));
 		bool intersect(const Ray& ray, HitResult& hitOut) const;
 };

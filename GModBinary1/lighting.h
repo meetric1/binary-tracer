@@ -3,4 +3,4 @@
 #include "glm/glm.hpp"
 #include "types.h"
 
-glm::vec3 calculateLighting(HitResult hitResult, glm::vec3 objectColor);
+glm::vec3 calculateLighting(HitResult hitResult);

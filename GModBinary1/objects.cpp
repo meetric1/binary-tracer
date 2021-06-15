@@ -2,7 +2,7 @@
 
 using glm::vec3;
 
-Sphere::Sphere(vec3 position, vec3 angle, vec3 colour, float radius) : BaseObject(position, angle, colour), rad(radius) {}
+Sphere::Sphere(vec3 position, vec3 angle, vec3 color, float radius) : BaseObject(position, angle, color), rad(radius) {}
 bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 {
 
@@ -30,13 +30,13 @@ bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 
 	hitOut.t = t;
 	hitOut.normal = glm::normalize(rayPosLocal + t * ray.dir);
-	hitOut.colour = col;
+	hitOut.color = col;
 	hitOut.hit = true;
 
 	return true;
 }
 
-Plane::Plane(vec3 position, vec3 angle, vec3 colour) : BaseObject(position, angle, colour) {}
+Plane::Plane(vec3 position, vec3 angle, vec3 color) : BaseObject(position, angle, color) {}
 bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 {
 	float A = glm::dot(ang, ray.dir);
@@ -51,7 +51,7 @@ bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 
 			hitOut.t = bOverA;
 			hitOut.normal = ang; // why is this even called ang, looks more like an up vector describing the object
-			hitOut.colour = vec3(((x + z) % 2) * 127 + 255) * col;
+			hitOut.color = vec3(((x + z) % 2) * 127 + 255) * col;
 			hitOut.hit = true;
 
 			return true;
