@@ -60,7 +60,14 @@ float deg2rad(float degrees)
 	return degrees * M_PI / 180.f;
 }
 
-HitResult TraceAll(Ray ray)
+std::string vec2string(vec3 v)
+{
+	return std::to_string(v.x) + "," + std::to_string(v.y) + "," + std::to_string(v.z);
+
+
+}
+
+HitResult TraceAll(Ray ray, ILuaBase* LuaBase)
 {
 	HitResult closestHit;
 	closestHit.t = FLT_MAX;
@@ -68,7 +75,7 @@ HitResult TraceAll(Ray ray)
 	for (size_t i = 0U; i < ObjectArray.size(); i++) {
 		HitResult hit;
 		if (ObjectArray[i]->intersect(ray, hit) && hit.t < closestHit.t) {
-				closestHit = hit;
+			closestHit = hit;
 		}
 	}
 
@@ -97,7 +104,7 @@ GMOD_MODULE_OPEN()
 
 	// Objects
 	{
-		Plane p(vec3(0.f, -5.f, 0.f), vec3(0.f, 1.f, 0.f), vec3(1.f));
+		Plane p(vec3(0.f, -10.f, 0.f), vec3(0.f, 1.f, 0.f));
 		ObjectArray.push_back(std::make_shared<Plane>(p));
 	}
 
@@ -121,7 +128,7 @@ GMOD_MODULE_OPEN()
 
 			Ray ray{ Cam.pos, vec3(xDir, yDir, 1) * matrix };
 
-			HitResult hit = TraceAll(ray);
+			HitResult hit = TraceAll(ray, LUA);
 
 			vec3 FinalColor = vec3(168, 219, 243);
 			if (hit.hit) {

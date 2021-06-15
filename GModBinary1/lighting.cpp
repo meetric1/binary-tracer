@@ -1,5 +1,4 @@
 #include "objects.h"
-#include "lighting.cpp"
 
 using glm::vec3;
 
