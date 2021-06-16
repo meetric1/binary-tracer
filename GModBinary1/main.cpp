@@ -103,12 +103,12 @@ GMOD_MODULE_OPEN()
 	ImageData = std::vector<unsigned char>(Res[0] * Res[1] * 3U, 0);
 
 	// Camera
-	Camera Cam{ vec3(0.f, 0.f, 0.f), normalize(vec3(1.f, 0.f, 0.f)), 90U };
+	Camera Cam{ vec3(0, 0, 0), normalize(vec3(1.f, 0.f, 0.f)), 90U };
 
 
 	// Objects
 	{
-		Plane p(vec3(0.f, -10.f, 0.f), vec3(0.f, 1.f, 0.f));
+		Plane p(vec3(0, -10, 0), vec3(0, 1, 0));
 		ObjectArray.push_back(std::make_shared<Plane>(p));
 	}
 

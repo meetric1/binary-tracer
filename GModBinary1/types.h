@@ -23,9 +23,9 @@ class BaseObject
 {
 public:
 	glm::vec3 pos;
-	glm::vec3 ang;
+	glm::vec3 dir;
 	glm::vec3 col;
 
-	BaseObject(glm::vec3 position, glm::vec3 angle, glm::vec3 color) : pos(position), ang(angle), col(color) {}
+	BaseObject(glm::vec3 position, glm::vec3 direction, glm::vec3 color) : pos(position), dir(direction), col(color) {}
 	virtual bool intersect(const Ray& ray, HitResult& hitOut) const = 0;
 };

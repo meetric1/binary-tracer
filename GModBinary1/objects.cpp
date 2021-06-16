@@ -2,7 +2,7 @@
 
 using glm::vec3;
 
-Sphere::Sphere(vec3 position, vec3 angle, vec3 color, float radius) : BaseObject(position, angle, color), rad(radius) {}
+Sphere::Sphere(vec3 position, vec3 direction, vec3 color, float radius) : BaseObject(position, direction, color), rad(radius) {}
 bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 {
 
@@ -36,13 +36,13 @@ bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 	return true;
 }
 
-Plane::Plane(vec3 position, vec3 angle, vec3 color) : BaseObject(position, angle, color) {}
+Plane::Plane(vec3 position, vec3 direction, vec3 color) : BaseObject(position, direction, color) {}
 bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 {
-	float A = glm::dot(ang, ray.dir);
+	float A = glm::dot(dir, ray.dir);
 
 	if (A < 0) {
-		float B = glm::dot(ang, pos - ray.pos);
+		float B = glm::dot(dir, pos - ray.pos);
 
 		if (B < 0) {
 			float bOverA = B / A;
@@ -50,7 +50,7 @@ bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 			unsigned int z = ((ray.pos + ray.dir) * bOverA).z;
 
 			hitOut.t = bOverA;
-			hitOut.normal = ang; // why is this even called ang, looks more like an up vector describing the object
+			hitOut.normal = dir; 
 			hitOut.color = vec3(((x + z) % 2) * 127 + 255) * col;
 			hitOut.hit = true;
 
@@ -62,3 +62,48 @@ bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 
 	return false;
 }
+
+double epsilon = 1e-8;	//Unsure what this even is or what it means
+
+Triangle::Triangle(vec3 position, vec3 direction, vec3 color, vec3 point0, vec3 point1, vec3 point2) : BaseObject(position, direction, color), pnt0(point0), pnt1(point1), pnt2(point2) {}
+bool Triangle::intersect(const Ray& ray, HitResult& hitOut) const
+{
+	hitOut.hit = false;
+
+	vec3 v0v1 = pnt1 - pnt0;
+	vec3 v0v2 = pnt2 - pnt0;
+	vec3 pvec = glm::cross(dir, v0v2);
+	float det = glm::dot(v0v1, pvec);
+
+	// ray and triangle are parallel if det is close to 0
+	//pretty sure fabs means 'float absolute'
+	if (fabs(det) < epsilon) {
+		return false;
+	}
+
+	float invDet = 1 / det;
+
+	vec3 tvec = pos - pnt0;
+	float u = glm::dot(tvec, pvec) * invDet;
+	if (u < 0 || u > 1) return false;
+
+	vec3 qvec = glm::cross(tvec, v0v1);
+	float v = glm::dot(dir, qvec) * invDet;
+	if (v < 0 || u + v > 1) return false;
+
+	float t = glm::dot(v0v2, qvec) * invDet;
+
+	//return (t > 0) ? true : false;		// I assume if t > 0 return true, else return false
+	if (t > 0) 
+	{
+		hitOut.t = t;
+		hitOut.normal = dir;
+		hitOut.color = col;
+		hitOut.hit = true;
+
+		return true;
+	}
+
+	return false;
+}
+
