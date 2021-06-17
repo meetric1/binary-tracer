@@ -1,19 +1,23 @@
 #include "objects.h"
 
 using glm::vec3;
+using Ray = bvh::Ray<float>;
 
+#pragma region Sphere
 Sphere::Sphere(vec3 position, vec3 direction, vec3 color, float radius) : BaseObject(position, direction, color), rad(radius) {}
-bool Sphere::intersect(const Trace& trace, HitResult& hitOut) const
-{
 
+bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
+{
 	hitOut.hit = false;
+	vec3 rayOrig = vec3(ray.origin[0], ray.origin[1], ray.origin[2]);
+	vec3 rayDir = vec3(ray.direction[0], ray.direction[1], ray.direction[2]);
 
 	using glm::dot;
-	vec3 tracePosLocal = trace.pos - pos;
+	vec3 rayPosLocal = rayOrig - pos;
 
-	float a = dot(trace.dir, trace.dir);
-	float b = 2.f * dot(tracePosLocal, trace.dir);
-	float c = dot(tracePosLocal, tracePosLocal) - rad * rad;
+	float a = dot(rayDir, rayDir);
+	float b = 2.f * dot(rayPosLocal, rayDir);
+	float c = dot(rayPosLocal, rayPosLocal) - rad * rad;
 
 	float discriminant = b * b - 4 * a * c;
 	if (discriminant <= 0.f) return false;
@@ -29,29 +33,34 @@ bool Sphere::intersect(const Trace& trace, HitResult& hitOut) const
 	else t = t1 < t2 ? t1 : t2;
 
 	hitOut.t = t;
-	hitOut.normal = glm::normalize(tracePosLocal + t * trace.dir);
-	hitOut.color = col;
+	hitOut.normal = glm::normalize(rayPosLocal + t * rayDir);
 	hitOut.hit = true;
 
 	return true;
 }
 
-Plane::Plane(vec3 position, vec3 direction, vec3 color) : BaseObject(position, direction, color) {}
-bool Plane::intersect(const Trace& trace, HitResult& hitOut) const
+void Sphere::setHitColour(HitResult& hitDataOut) const
 {
-	float A = glm::dot(dir, trace.dir);
+	hitDataOut.color = col;
+}
+#pragma endregion
+
+#pragma region Plane
+Plane::Plane(vec3 position, vec3 direction, vec3 color) : BaseObject(position, direction, color) {}
+bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
+{
+	hitOut.hit = false;
+	vec3 rayOrig = vec3(ray.origin[0], ray.origin[1], ray.origin[2]);
+	vec3 rayDir = vec3(ray.direction[0], ray.direction[1], ray.direction[2]);
+
+	float A = glm::dot(dir, rayDir);
 
 	if (A < 0) {
-		float B = glm::dot(dir, pos - trace.pos);
+		float B = glm::dot(dir, pos - rayOrig);
 
 		if (B < 0) {
-			float bOverA = B / A;
-			unsigned int x = ((trace.pos + trace.dir) * bOverA).x;
-			unsigned int z = ((trace.pos + trace.dir) * bOverA).z;
-
-			hitOut.t = bOverA;
-			hitOut.normal = dir; 
-			hitOut.color = vec3(((x + z) % 2) * 127 + 255) * col;
+			hitOut.t = B / A;
+			hitOut.normal = dir;
 			hitOut.hit = true;
 
 			return true;
@@ -59,56 +68,32 @@ bool Plane::intersect(const Trace& trace, HitResult& hitOut) const
 	}
 
 	hitOut.hit = false;
-
 	return false;
 }
 
-
-
-/*
-double epsilon = 1e-8;	//Unsure what this even is or what it means
-
-
-
-Triangle::Triangle(vec3 position, vec3 direction, vec3 color, vec3 point0, vec3 point1, vec3 point2) : BaseObject(position, direction, color), pnt0(point0), pnt1(point1), pnt2(point2) {}
-bool Triangle::intersect(const Trace& trace, HitResult& hitOut) const
+void Plane::setHitColour(HitResult& hitDataOut) const
 {
-	hitOut.hit = false;
-
-	vec3 v0v1 = pnt1 - pnt0;
-	vec3 v0v2 = pnt2 - pnt0;
-	vec3 pvec = glm::cross(dir, v0v2);
-	float det = glm::dot(v0v1, pvec);
-
-	// ray and triangle are parallel if det is close to 0
-	//pretty sure fabs means 'float absolute'
-	if (fabs(det) < epsilon) {
-		return false;
-	}
-
-	float invDet = 1 / det;
-
-	vec3 tvec = pos - pnt0;
-	float u = glm::dot(tvec, pvec) * invDet;
-	if (u < 0 || u > 1) return false;
-
-	vec3 qvec = glm::cross(tvec, v0v1);
-	float v = glm::dot(dir, qvec) * invDet;
-	if (v < 0 || u + v > 1) return false;
-
-	float t = glm::dot(v0v2, qvec) * invDet;
-
-	//return (t > 0) ? true : false;		// I assume if t > 0 return true, else return false
-	if (t > 0) 
+	// https://computergraphics.stackexchange.com/questions/8382/how-do-i-convert-a-hit-on-an-infinite-plane-to-uv-coordinates-for-texturing-in-a
+	vec3 uAxis;
 	{
-		hitOut.t = t;
-		hitOut.normal = dir;
-		hitOut.color = col;
-		hitOut.hit = true;
+		vec3 a = cross(hitDataOut.normal, vec3(1.f, 0.f, 0.f));
+		vec3 b = cross(hitDataOut.normal, vec3(0.f, 1.f, 0.f));
 
-		return true;
+		vec3 max_ab = dot(a, a) < dot(b, b) ? b : a;
+
+		vec3 c = cross(hitDataOut.normal, vec3(0.f, 0.f, 1.f));
+		uAxis = normalize(dot(max_ab, max_ab) < dot(c, c) ? c : max_ab);
 	}
 
-	return false;
+	vec3 vAxis = cross(hitDataOut.normal, uAxis);
+
+	float u = dot(uAxis, hitDataOut.pos), v = dot(vAxis, hitDataOut.pos); // Scale the uvs here if needed
+	u -= floor(u);
+	v -= floor(v);
+
+	// This produces a grid pattern by performing an XOR comparison between whether we hit the right half of the uv segment, or the bottom half
+	// In case you don't know what XOR is, it's true when either of the two booleans are true, but not when they're both true
+	bool rightHalf = u > 0.5f, bottomHalf = v > 0.5f;
+	hitDataOut.color = col * (rightHalf != bottomHalf ? 0.9f : 0.3f); // Change the weights here depending on the look you want
 }
-*/
+#pragma endregion

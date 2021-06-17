@@ -8,7 +8,7 @@
 #include "lighting.h"
 
 using namespace GarrysMod::Lua;
-using vec3 = glm::vec3;
+using glm::vec3;
 
 using Vector3 = bvh::Vector3<float>;
 using Triangle = bvh::Triangle<float>;
@@ -72,74 +72,59 @@ std::string vec2string(vec3 v)
 	return std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z);
 }
 
-Vector3 Vec2Vector(vec3 vec)	//shit function name but whatever lol
+Vector3 Vec3ToVector3(const vec3& vec)	//shit function name but whatever lol
 {
 	return Vector3(vec.x, vec.y, vec.z);
-
+}
+vec3 Vector3ToVec3(const Vector3& vec)
+{
+	return vec3(vec[0], vec[1], vec[2]);
 }
 
 
-HitResult TraceAll(Trace trace, ILuaBase* LuaBase)
+HitResult TraceAll(
+	const Ray& ray,
+	const std::vector<std::shared_ptr<BaseObject>>& objects, const std::vector<bvh::Triangle<float>>& triangles,
+	const bvh::SingleRayTraverser<Bvh>& traverser, const bvh::ClosestPrimitiveIntersector<Bvh, Triangle>& intersector
+)
 {
 	HitResult closestHit;
 	closestHit.t = FLT_MAX;
 
-	for (size_t i = 0U; i < ObjectArray.size(); i++) {
+	std::shared_ptr<BaseObject> closestHitObject;
+
+	for (size_t i = 0U; i < objects.size(); i++) {
 		HitResult hit;
-		if (ObjectArray[i]->intersect(trace, hit) && hit.t < closestHit.t) {
+		if (objects[i]->intersect(ray, hit) && hit.t < closestHit.t) {
 			closestHit = hit;
+			closestHitObject = objects[i];
 		}
 	}
 
-	// Begin horrid triangle shit
-
-	/* Calculating meshes every pixel is horribly inefficient, change this later when it is working properly! */
-
-	Bvh bvh;	
-
-	// Create an acceleration data structure on those triangles
-	bvh::SweepSahBuilder<Bvh> builder(bvh);
-	auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(TriangleArray.data(), TriangleArray.size());
-	auto global_bbox = bvh::compute_bounding_boxes_union(bboxes.get(), TriangleArray.size());
-	builder.build(global_bbox, bboxes.get(), centers.get(), TriangleArray.size());
-
-	// Intersect a ray with the data structure
-	Ray ray(
-		Vec2Vector(trace.pos),		// origin
-		Vec2Vector(trace.dir),		// direction
-		0.f,						// minimum distance
-		FLT_MAX						// maximum distance
-	);
-	bvh::ClosestPrimitiveIntersector<Bvh, Triangle> primitive_intersector(bvh, TriangleArray.data());
-	bvh::SingleRayTraverser<Bvh> traverser(bvh);
-
-	auto hit = traverser.traverse(ray, primitive_intersector);
+	auto hit = traverser.traverse(ray, intersector);
 
 	if (hit) {
 		auto intersection = hit->intersection;
-		
-		if (intersection.t < closestHit.t)
-		{
+
+		if (intersection.t < closestHit.t) {
 			closestHit.t = intersection.t;
-			closestHit.color = vec3(0, 255, 0);			//just fucking make it green idc
-			closestHit.normal = vec3(1.f, 0.f, 0.f);	//how do I calculate this?
+			closestHit.color = vec3(0, 255, 0); //just fucking make it green idc
+			closestHit.normal = Vector3ToVec3(triangles[hit->primitive_index].n); //how do I calculate this? You calculate it using either a) the triangle's geometric normal (calculated from the edges, which I'm using here), or b) the shading normal (calculated from interpolating the vertex normals using the hit barycentrics)
 			closestHit.hit = true;
-			
-
 		}
-		//intersection.u
-		//intersection.v
 	}
-
 
 	// End triangle shit
 
-	if (closestHit.hit)
-	{
-		closestHit.color = closestHit.color * calculateLighting(closestHit);
+	if (closestHit.hit) {
+		closestHit.pos = Vector3ToVec3(ray.origin + ray.direction * closestHit.t); // calculate position at the end rather than every object (way faster)
+
+		// The colour calc for the plane is expensive, so I moved colour calculation to a new function that gets called on the closest hit only
+		closestHitObject->setHitColour(closestHit);
+
+		closestHit.color *= calculateLighting(closestHit);
 	}
 
-	closestHit.pos = trace.pos + trace.dir * closestHit.t; // calculate position at the end rather than every object (way faster)
 	return closestHit;
 }
 
@@ -152,56 +137,71 @@ GMOD_MODULE_OPEN()
 	std::chrono::steady_clock::time_point RENDER_START_TIME = std::chrono::high_resolution_clock::now();
 
 	// Resolution
-	Res[0] = 1920;         // X res
-	Res[1] = 1080;         // Y res
+	Res[0] = 1920; // X res
+	Res[1] = 1080; // Y res
 	
 	ImageData = std::vector<unsigned char>(Res[0] * Res[1] * 3U, 0);
 
 	// Camera
 	Camera Cam{ vec3(0.f, 0.f, 0.f), normalize(vec3(1.f, 0.f, 0.f)), 90U };
+	glm::mat3x3 viewMatrix = glm::orientation(Cam.dir, vec3(0.f, 0.f, 1.f));
 
-
-	// Objects
+	// Primitive objects
+	std::vector<std::shared_ptr<BaseObject>> objects;
 	{
 		Plane p(vec3(0.f, -10.f, 0.f), vec3(0.f, 1.f, 0.f));
-		ObjectArray.push_back(std::make_shared<Plane>(p));
+		objects.push_back(std::make_shared<Plane>(p));
 	}
 
 	for(int i = 0; i < 10; i++) {
-		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10 - 25, -5, cos(deg2rad(i * 36)) * 10), vec3(), vec3(i * 10), 3.f};
-		ObjectArray.push_back(std::make_shared<Sphere>(s));
+		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10.f - 25.f, -5.f, cos(deg2rad(i * 36)) * 10.f), vec3(), vec3(static_cast<float>(i) / 10.f), 3.f};
+		objects.push_back(std::make_shared<Sphere>(s));
 	}
 
+	// Meshes
+	std::vector<bvh::Triangle<float>> triangles;
+
 	// Singular Triangle 
-	TriangleArray.emplace_back(
+	triangles.emplace_back(
 		Vector3(10.f, -10.f, 10.f),
 		Vector3(10.f, 10.f, 10.f),
 		Vector3(-10.f, 10.f, 10.f)
 	);
 
 
+	// Build acceleration structure
+	Bvh accelStruct = Bvh();
+	bvh::SweepSahBuilder<Bvh> builder(accelStruct);
+	auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(triangles.data(), triangles.size());
+	auto global_bbox = bvh::compute_bounding_boxes_union(bboxes.get(), triangles.size());
+	builder.build(global_bbox, bboxes.get(), centers.get(), triangles.size());
 
-
-	glm::mat3x3 matrix = glm::orientation(Cam.dir, vec3(0.f, 0.f, 1.f));
+	auto intersector = bvh::ClosestPrimitiveIntersector<Bvh, Triangle>(accelStruct, triangles.data());
+	auto traverser = bvh::SingleRayTraverser<Bvh>(accelStruct);
 
 	/// Actual Tracing ///
-	for (unsigned int y = 0; y < Res[1]; y++) {
-		for (unsigned int x = 0; x < Res[0]; x++) {
+	for (unsigned int y = 0U; y < Res[1]; y++) {
+		for (unsigned int x = 0U; x < Res[0]; x++) {
 			//Fov calc
 
 			float scale = tan(deg2rad(Cam.fov * 0.5f));
 			float imageAspectRatio = Res[0] / static_cast<float>(Res[1]);
 
-			float xDir = (2.f * (x + 0.5f) / static_cast<float>(Res[0]) - 1) * imageAspectRatio * scale;
+			float xDir = (2.f * (x + 0.5f) / static_cast<float>(Res[0]) - 1.f) * imageAspectRatio * scale;
 			float yDir = (1.f - 2.f * (y + 0.5f) / static_cast<float>(Res[1])) * scale;
 
-			Trace trace{ Cam.pos, vec3(xDir, yDir, 1) * matrix };
+			Ray ray{
+				Vec3ToVector3(Cam.pos),
+				Vec3ToVector3(vec3(xDir, yDir, 1) * viewMatrix),
+				0.f,
+				FLT_MAX
+			};
 
-			HitResult hit = TraceAll(trace, LUA);
+			HitResult hit = TraceAll(ray, objects, triangles, traverser, intersector);
 
-			vec3 FinalColor = vec3(168, 219, 243);
+			vec3 FinalColor = vec3(168.f, 219.f, 243.f);
 			if (hit.hit) {
-				FinalColor = hit.color;
+				FinalColor = hit.color * 255.f;
 			}
 
 			writePixel(x, y, FinalColor.x, FinalColor.y, FinalColor.z);

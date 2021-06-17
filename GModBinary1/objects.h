@@ -8,26 +8,14 @@ class Sphere : public BaseObject
 
 	public:
 		Sphere(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float radius);
-		bool intersect(const Trace& trace, HitResult& hitOut) const;
+		bool intersect(const bvh::Ray<float>& ray, HitResult& hitOut) const;
+		void setHitColour(HitResult& hitDataOut) const;
 };
 
 class Plane : public BaseObject
 {
 	public:
 		Plane(glm::vec3 position, glm::vec3 direction, glm::vec3 color = glm::vec3(1.f));
-		bool intersect(const Trace& trace, HitResult& hitOut) const;
+		bool intersect(const bvh::Ray<float>& ray, HitResult& hitOut) const;
+		void setHitColour(HitResult& hitDataOut) const;
 };
-
-/*
-class Triangle : public BaseObject
-{
-	glm::vec3 pnt0;
-	glm::vec3 pnt1;
-	glm::vec3 pnt2;
-
-public:
-	Triangle(glm::vec3 position, glm::vec3 direction, glm::vec3 color, glm::vec3 point0, glm::vec3 point1, glm::vec3 point2);
-	bool intersect(const Trace& trace, HitResult& hitOut) const;
-};
-
-*/
