@@ -13,7 +13,7 @@ struct HitResult
 	glm::vec3 color;
 };
 
-struct Ray
+struct Trace //rename this because bvh conflicts with it
 {
 	glm::vec3 pos;
 	glm::vec3 dir;
@@ -27,5 +27,5 @@ public:
 	glm::vec3 col;
 
 	BaseObject(glm::vec3 position, glm::vec3 direction, glm::vec3 color) : pos(position), dir(direction), col(color) {}
-	virtual bool intersect(const Ray& ray, HitResult& hitOut) const = 0;
+	virtual bool intersect(const Trace& trace, HitResult& hitOut) const = 0;
 };

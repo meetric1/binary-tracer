@@ -8,16 +8,17 @@ class Sphere : public BaseObject
 
 	public:
 		Sphere(glm::vec3 position, glm::vec3 direction, glm::vec3 color, float radius);
-		bool intersect(const Ray& ray, HitResult& hitOut) const;
+		bool intersect(const Trace& trace, HitResult& hitOut) const;
 };
 
 class Plane : public BaseObject
 {
 	public:
 		Plane(glm::vec3 position, glm::vec3 direction, glm::vec3 color = glm::vec3(1.f));
-		bool intersect(const Ray& ray, HitResult& hitOut) const;
+		bool intersect(const Trace& trace, HitResult& hitOut) const;
 };
 
+/*
 class Triangle : public BaseObject
 {
 	glm::vec3 pnt0;
@@ -26,6 +27,7 @@ class Triangle : public BaseObject
 
 public:
 	Triangle(glm::vec3 position, glm::vec3 direction, glm::vec3 color, glm::vec3 point0, glm::vec3 point1, glm::vec3 point2);
-	bool intersect(const Ray& ray, HitResult& hitOut) const;
+	bool intersect(const Trace& trace, HitResult& hitOut) const;
 };
 
+*/

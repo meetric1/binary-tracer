@@ -3,17 +3,17 @@
 using glm::vec3;
 
 Sphere::Sphere(vec3 position, vec3 direction, vec3 color, float radius) : BaseObject(position, direction, color), rad(radius) {}
-bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
+bool Sphere::intersect(const Trace& trace, HitResult& hitOut) const
 {
 
 	hitOut.hit = false;
 
 	using glm::dot;
-	vec3 rayPosLocal = ray.pos - pos;
+	vec3 tracePosLocal = trace.pos - pos;
 
-	float a = dot(ray.dir, ray.dir);
-	float b = 2.f * dot(rayPosLocal, ray.dir);
-	float c = dot(rayPosLocal, rayPosLocal) - rad * rad;
+	float a = dot(trace.dir, trace.dir);
+	float b = 2.f * dot(tracePosLocal, trace.dir);
+	float c = dot(tracePosLocal, tracePosLocal) - rad * rad;
 
 	float discriminant = b * b - 4 * a * c;
 	if (discriminant <= 0.f) return false;
@@ -29,7 +29,7 @@ bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 	else t = t1 < t2 ? t1 : t2;
 
 	hitOut.t = t;
-	hitOut.normal = glm::normalize(rayPosLocal + t * ray.dir);
+	hitOut.normal = glm::normalize(tracePosLocal + t * trace.dir);
 	hitOut.color = col;
 	hitOut.hit = true;
 
@@ -37,17 +37,17 @@ bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 }
 
 Plane::Plane(vec3 position, vec3 direction, vec3 color) : BaseObject(position, direction, color) {}
-bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
+bool Plane::intersect(const Trace& trace, HitResult& hitOut) const
 {
-	float A = glm::dot(dir, ray.dir);
+	float A = glm::dot(dir, trace.dir);
 
 	if (A < 0) {
-		float B = glm::dot(dir, pos - ray.pos);
+		float B = glm::dot(dir, pos - trace.pos);
 
 		if (B < 0) {
 			float bOverA = B / A;
-			unsigned int x = ((ray.pos + ray.dir) * bOverA).x;
-			unsigned int z = ((ray.pos + ray.dir) * bOverA).z;
+			unsigned int x = ((trace.pos + trace.dir) * bOverA).x;
+			unsigned int z = ((trace.pos + trace.dir) * bOverA).z;
 
 			hitOut.t = bOverA;
 			hitOut.normal = dir; 
@@ -63,10 +63,15 @@ bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 	return false;
 }
 
+
+
+/*
 double epsilon = 1e-8;	//Unsure what this even is or what it means
 
+
+
 Triangle::Triangle(vec3 position, vec3 direction, vec3 color, vec3 point0, vec3 point1, vec3 point2) : BaseObject(position, direction, color), pnt0(point0), pnt1(point1), pnt2(point2) {}
-bool Triangle::intersect(const Ray& ray, HitResult& hitOut) const
+bool Triangle::intersect(const Trace& trace, HitResult& hitOut) const
 {
 	hitOut.hit = false;
 
@@ -106,4 +111,4 @@ bool Triangle::intersect(const Ray& ray, HitResult& hitOut) const
 
 	return false;
 }
-
+*/

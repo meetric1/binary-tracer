@@ -4,12 +4,16 @@
 
 #include "GarrysMod/Lua/Interface.h"
 #include "glm/gtx/rotate_vector.hpp"
-#include "bvh/bvh.hpp"
 
 #include "lighting.h"
 
 using namespace GarrysMod::Lua;
-using glm::vec3;
+using vec3 = glm::vec3;
+
+using Vector3 = bvh::Vector3<float>;
+using Triangle = bvh::Triangle<float>;
+using Ray = bvh::Ray<float>;
+using Bvh = bvh::Bvh<float>;
 
 /// FUNCTIONS ///
 
@@ -68,23 +72,74 @@ std::string vec2string(vec3 v)
 	return std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z);
 }
 
-HitResult TraceAll(Ray ray, ILuaBase* LuaBase)
+Vector3 Vec2Vector(vec3 vec)	//shit function name but whatever lol
+{
+	return Vector3(vec.x, vec.y, vec.z);
+
+}
+
+
+HitResult TraceAll(Trace trace, ILuaBase* LuaBase)
 {
 	HitResult closestHit;
 	closestHit.t = FLT_MAX;
 
 	for (size_t i = 0U; i < ObjectArray.size(); i++) {
 		HitResult hit;
-		if (ObjectArray[i]->intersect(ray, hit) && hit.t < closestHit.t) {
+		if (ObjectArray[i]->intersect(trace, hit) && hit.t < closestHit.t) {
 			closestHit = hit;
 		}
 	}
+
+	// Begin horrid triangle shit
+
+	/* Calculating meshes every pixel is horribly inefficient, change this later when it is working properly! */
+
+	Bvh bvh;	
+
+	// Create an acceleration data structure on those triangles
+	bvh::SweepSahBuilder<Bvh> builder(bvh);
+	auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(TriangleArray.data(), TriangleArray.size());
+	auto global_bbox = bvh::compute_bounding_boxes_union(bboxes.get(), TriangleArray.size());
+	builder.build(global_bbox, bboxes.get(), centers.get(), TriangleArray.size());
+
+	// Intersect a ray with the data structure
+	Ray ray(
+		Vec2Vector(trace.pos),		// origin
+		Vec2Vector(trace.dir),		// direction
+		0.f,						// minimum distance
+		FLT_MAX						// maximum distance
+	);
+	bvh::ClosestPrimitiveIntersector<Bvh, Triangle> primitive_intersector(bvh, TriangleArray.data());
+	bvh::SingleRayTraverser<Bvh> traverser(bvh);
+
+	auto hit = traverser.traverse(ray, primitive_intersector);
+
+	if (hit) {
+		auto intersection = hit->intersection;
+		
+		if (intersection.t < closestHit.t)
+		{
+			closestHit.t = intersection.t;
+			closestHit.color = vec3(0, 255, 0);			//just fucking make it green idc
+			closestHit.normal = vec3(1.f, 0.f, 0.f);	//how do I calculate this?
+			closestHit.hit = true;
+			
+
+		}
+		//intersection.u
+		//intersection.v
+	}
+
+
+	// End triangle shit
+
 	if (closestHit.hit)
 	{
 		closestHit.color = closestHit.color * calculateLighting(closestHit);
 	}
-	
-	closestHit.pos = ray.pos + ray.dir * closestHit.t; // calculate position at the end rather than every object (way faster)
+
+	closestHit.pos = trace.pos + trace.dir * closestHit.t; // calculate position at the end rather than every object (way faster)
 	return closestHit;
 }
 
@@ -103,12 +158,12 @@ GMOD_MODULE_OPEN()
 	ImageData = std::vector<unsigned char>(Res[0] * Res[1] * 3U, 0);
 
 	// Camera
-	Camera Cam{ vec3(0, 0, 0), normalize(vec3(1.f, 0.f, 0.f)), 90U };
+	Camera Cam{ vec3(0.f, 0.f, 0.f), normalize(vec3(1.f, 0.f, 0.f)), 90U };
 
 
 	// Objects
 	{
-		Plane p(vec3(0, -10, 0), vec3(0, 1, 0));
+		Plane p(vec3(0.f, -10.f, 0.f), vec3(0.f, 1.f, 0.f));
 		ObjectArray.push_back(std::make_shared<Plane>(p));
 	}
 
@@ -116,6 +171,16 @@ GMOD_MODULE_OPEN()
 		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10 - 25, -5, cos(deg2rad(i * 36)) * 10), vec3(), vec3(i * 10), 3.f};
 		ObjectArray.push_back(std::make_shared<Sphere>(s));
 	}
+
+	// Singular Triangle 
+	TriangleArray.emplace_back(
+		Vector3(10.f, -10.f, 10.f),
+		Vector3(10.f, 10.f, 10.f),
+		Vector3(-10.f, 10.f, 10.f)
+	);
+
+
+
 
 	glm::mat3x3 matrix = glm::orientation(Cam.dir, vec3(0.f, 0.f, 1.f));
 
@@ -130,9 +195,9 @@ GMOD_MODULE_OPEN()
 			float xDir = (2.f * (x + 0.5f) / static_cast<float>(Res[0]) - 1) * imageAspectRatio * scale;
 			float yDir = (1.f - 2.f * (y + 0.5f) / static_cast<float>(Res[1])) * scale;
 
-			Ray ray{ Cam.pos, vec3(xDir, yDir, 1) * matrix };
+			Trace trace{ Cam.pos, vec3(xDir, yDir, 1) * matrix };
 
-			HitResult hit = TraceAll(ray, LUA);
+			HitResult hit = TraceAll(trace, LUA);
 
 			vec3 FinalColor = vec3(168, 219, 243);
 			if (hit.hit) {
@@ -143,7 +208,7 @@ GMOD_MODULE_OPEN()
 		}
 	}
 	
-	bool success = ppmWrite("C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\renders\\render6.ppm", ImageData.data(), Res);
+	bool success = ppmWrite("C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\renders\\render7.ppm", ImageData.data(), Res);
 	if (success) {
 		double RENDER_END_TIME = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - RENDER_START_TIME).count();
 		printLua(LUA, "Finished!\nRender & Save Time: " + std::to_string(RENDER_END_TIME / 1000) + "Seconds");
