@@ -3,7 +3,7 @@
 #include "Main.h"
 
 #include "GarrysMod/Lua/Interface.h"
-#include "glm/gtx/rotate_vector.hpp"
+#include <glm/ext/matrix_transform.hpp>
 
 #include "lighting.h"
 
@@ -42,7 +42,7 @@ bool ppmWrite(const char* path, const unsigned char* data, const unsigned int re
 	return true;
 }
 
-//Writes a color to the image data array to be saved later
+//Writes a colour to the image data array to be saved later
 void writePixel(const int x, const int y, unsigned char r, unsigned char g, unsigned char b)
 {
 	unsigned int i = (y * Res[0] + x) * 3U;
@@ -89,6 +89,7 @@ HitResult TraceAll(
 )
 {
 	HitResult closestHit;
+	closestHit.hit = false;
 	closestHit.t = FLT_MAX;
 
 	std::shared_ptr<BaseObject> closestHitObject;
@@ -101,28 +102,26 @@ HitResult TraceAll(
 		}
 	}
 
-	auto hit = traverser.traverse(ray, intersector);
-
-	if (hit) {
-		auto intersection = hit->intersection;
-
-		if (intersection.t < closestHit.t) {
-			closestHit.t = intersection.t;
-			closestHit.color = vec3(0, 255, 0); //just fucking make it green idc
-			closestHit.normal = Vector3ToVec3(triangles[hit->primitive_index].n); //how do I calculate this? You calculate it using either a) the triangle's geometric normal (calculated from the edges, which I'm using here), or b) the shading normal (calculated from interpolating the vertex normals using the hit barycentrics)
-			closestHit.hit = true;
-		}
-	}
-
-	// End triangle shit
-
 	if (closestHit.hit) {
 		closestHit.pos = Vector3ToVec3(ray.origin + ray.direction * closestHit.t); // calculate position at the end rather than every object (way faster)
 
 		// The colour calc for the plane is expensive, so I moved colour calculation to a new function that gets called on the closest hit only
-		closestHitObject->setHitColour(closestHit);
+		if (closestHitObject) closestHitObject->setHitColour(closestHit);
+	}
 
-		closestHit.color *= calculateLighting(closestHit);
+	if (auto bvhHit = traverser.traverse(ray, intersector)) {
+		auto intersection = bvhHit->intersection;
+
+		if (intersection.t < closestHit.t) {
+			closestHit.t = intersection.t;
+			closestHit.colour = vec3(0, 255, 0); //just fucking make it green idc
+			closestHit.normal = Vector3ToVec3(triangles[bvhHit->primitive_index].n); //how do I calculate this? You calculate it using either a) the triangle's geometric normal (calculated from the edges, which I'm using here), or b) the shading normal (calculated from interpolating the vertex normals using the hit barycentrics)
+			closestHit.hit = true;
+		}
+	}
+
+	if (closestHit.hit) {
+		closestHit.colour *= calculateLighting(closestHit);
 	}
 
 	return closestHit;
@@ -144,17 +143,23 @@ GMOD_MODULE_OPEN()
 
 	// Camera
 	Camera Cam{ vec3(0.f, 0.f, 0.f), normalize(vec3(1.f, 0.f, 0.f)), 90U };
-	glm::mat3x3 viewMatrix = glm::orientation(Cam.dir, vec3(0.f, 0.f, 1.f));
+
+	// Hard coded everything here as you're gonna need the proper up and target vectors in from GLua
+	glm::mat4 viewMatrix = glm::lookAt(
+		vec3(0.f), // Camera position,
+		vec3(1.f, 0.f, 0.f), // Target position (the position the camera is looking at, you'll use cam pos + cam dir from lua)
+		vec3(0.f, 0.f, 1.f) // Up vector (you'll use the eyeang's up vector from lua)
+	);
 
 	// Primitive objects
 	std::vector<std::shared_ptr<BaseObject>> objects;
 	{
-		Plane p(vec3(0.f, -10.f, 0.f), vec3(0.f, 1.f, 0.f));
+		Plane p(vec3(0.f, 0.f, -10.f), vec3(0.f, 0.f, 1.f), vec3(1.f, 0.8f, 0.2f));
 		objects.push_back(std::make_shared<Plane>(p));
 	}
 
 	for(int i = 0; i < 10; i++) {
-		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10.f - 25.f, -5.f, cos(deg2rad(i * 36)) * 10.f), vec3(), vec3(static_cast<float>(i) / 10.f), 3.f};
+		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10.f + 25.f, cos(deg2rad(i * 36)) * 10.f, -5.f), vec3(), vec3(static_cast<float>(i) / 10.f), 3.f};
 		objects.push_back(std::make_shared<Sphere>(s));
 	}
 
@@ -163,9 +168,9 @@ GMOD_MODULE_OPEN()
 
 	// Singular Triangle 
 	triangles.emplace_back(
-		Vector3(10.f, -10.f, 10.f),
-		Vector3(10.f, 10.f, 10.f),
-		Vector3(-10.f, 10.f, 10.f)
+		Vector3(50.f, 0.f, 10.f),
+		Vector3(50.f, -100.f, -10.f),
+		Vector3(50.f, 100.f, -10.f)
 	);
 
 
@@ -180,35 +185,33 @@ GMOD_MODULE_OPEN()
 	auto traverser = bvh::SingleRayTraverser<Bvh>(accelStruct);
 
 	/// Actual Tracing ///
+	float scale = tan(deg2rad(Cam.fov * 0.5f));
+	float imageAspectRatio = Res[0] / static_cast<float>(Res[1]);
 	for (unsigned int y = 0U; y < Res[1]; y++) {
 		for (unsigned int x = 0U; x < Res[0]; x++) {
 			//Fov calc
-
-			float scale = tan(deg2rad(Cam.fov * 0.5f));
-			float imageAspectRatio = Res[0] / static_cast<float>(Res[1]);
-
 			float xDir = (2.f * (x + 0.5f) / static_cast<float>(Res[0]) - 1.f) * imageAspectRatio * scale;
 			float yDir = (1.f - 2.f * (y + 0.5f) / static_cast<float>(Res[1])) * scale;
 
 			Ray ray{
-				Vec3ToVector3(Cam.pos),
-				Vec3ToVector3(vec3(xDir, yDir, 1) * viewMatrix),
+				Vec3ToVector3(viewMatrix * glm::vec4(0.f, 0.f, 0.f, 1.f)),
+				Vec3ToVector3(viewMatrix * glm::vec4(-yDir, -1, xDir, 0.f)),
 				0.f,
 				FLT_MAX
 			};
 
 			HitResult hit = TraceAll(ray, objects, triangles, traverser, intersector);
 
-			vec3 FinalColor = vec3(168.f, 219.f, 243.f);
+			vec3 FinalColour = vec3(168.f, 219.f, 243.f);
 			if (hit.hit) {
-				FinalColor = hit.color * 255.f;
+				FinalColour = hit.colour * 255.f;
 			}
 
-			writePixel(x, y, FinalColor.x, FinalColor.y, FinalColor.z);
+			writePixel(x, y, FinalColour.x, FinalColour.y, FinalColour.z);
 		}
 	}
 	
-	bool success = ppmWrite("C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\renders\\render7.ppm", ImageData.data(), Res);
+	bool success = ppmWrite("D:\\Programming\\GitHub\\MeeBinaryTracer\\Release\\x64\\render.ppm", ImageData.data(), Res);
 	if (success) {
 		double RENDER_END_TIME = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - RENDER_START_TIME).count();
 		printLua(LUA, "Finished!\nRender & Save Time: " + std::to_string(RENDER_END_TIME / 1000) + "Seconds");

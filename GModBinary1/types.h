@@ -11,7 +11,7 @@ struct HitResult
 	float t;
 	glm::vec3 normal; 
 	glm::vec3 pos;
-	glm::vec3 color;
+	glm::vec3 colour;
 };
 
 class BaseObject
@@ -21,7 +21,7 @@ public:
 	glm::vec3 dir;
 	glm::vec3 col;
 
-	BaseObject(glm::vec3 position, glm::vec3 direction, glm::vec3 color) : pos(position), dir(direction), col(color) {}
+	BaseObject(glm::vec3 position, glm::vec3 direction, glm::vec3 colour) : pos(position), dir(direction), col(colour) {}
 	virtual bool intersect(const bvh::Ray<float>& ray, HitResult& hitOut) const = 0;
 	virtual void setHitColour(HitResult& hitDataOut) const = 0;
 };
