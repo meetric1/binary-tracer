@@ -4,7 +4,7 @@ using glm::vec3;
 using Ray = bvh::Ray<float>;
 
 #pragma region Sphere
-Sphere::Sphere(vec3 position, vec3 direction, vec3 color, float radius) : BaseObject(position, direction, color), rad(radius) {}
+Sphere::Sphere(vec3 position, vec3 direction, vec3 colour, float radius) : BaseObject(position, direction, colour), rad(radius) {}
 
 bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 {
@@ -41,12 +41,12 @@ bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 
 void Sphere::setHitColour(HitResult& hitDataOut) const
 {
-	hitDataOut.color = col;
+	hitDataOut.colour = col;
 }
 #pragma endregion
 
 #pragma region Plane
-Plane::Plane(vec3 position, vec3 direction, vec3 color) : BaseObject(position, direction, color) {}
+Plane::Plane(vec3 position, vec3 direction, vec3 colour) : BaseObject(position, direction, colour) {}
 bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 {
 	hitOut.hit = false;
@@ -87,13 +87,13 @@ void Plane::setHitColour(HitResult& hitDataOut) const
 
 	vec3 vAxis = cross(hitDataOut.normal, uAxis);
 
-	float u = dot(uAxis, hitDataOut.pos), v = dot(vAxis, hitDataOut.pos); // Scale the uvs here if needed
+	float u = dot(uAxis, hitDataOut.pos) * 0.25f, v = dot(vAxis, hitDataOut.pos) * 0.25f; // Scale the uvs here if needed
 	u -= floor(u);
 	v -= floor(v);
 
 	// This produces a grid pattern by performing an XOR comparison between whether we hit the right half of the uv segment, or the bottom half
 	// In case you don't know what XOR is, it's true when either of the two booleans are true, but not when they're both true
 	bool rightHalf = u > 0.5f, bottomHalf = v > 0.5f;
-	hitDataOut.color = col * (rightHalf != bottomHalf ? 0.9f : 0.3f); // Change the weights here depending on the look you want
+	hitDataOut.colour = col * (rightHalf != bottomHalf ? 0.9f : 0.3f); // Change the weights here depending on the look you want
 }
 #pragma endregion
