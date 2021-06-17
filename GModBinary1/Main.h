@@ -26,6 +26,4 @@ struct Camera
 };
 
 std::vector<unsigned char> ImageData;
-std::vector<std::shared_ptr<BaseObject>> ObjectArray;
-std::vector<bvh::Triangle<float>> TriangleArray;
 unsigned int Res[2];
