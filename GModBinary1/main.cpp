@@ -1,11 +1,10 @@
 #define _USE_MATH_DEFINES
 
 #include "Main.h"
-
 #include "GarrysMod/Lua/Interface.h"
+
 #include <glm/ext/matrix_transform.hpp>
 
-#include "lighting.h"
 
 using namespace GarrysMod::Lua;
 using glm::vec3;
@@ -16,16 +15,6 @@ using Ray = bvh::Ray<float>;
 using Bvh = bvh::Bvh<float>;
 
 /// FUNCTIONS ///
-
-// Prints input to in-game console
-void printLua(ILuaBase* inst, std::string text)
-{
-	inst->PushSpecial(SPECIAL_GLOB);
-	inst->GetField(-1, "print");
-	inst->PushString(text.c_str());
-	inst->Call(1, 0);
-	inst->Pop();
-}
 
 // Creates and saves an image
 bool ppmWrite(const char* path, const unsigned char* data, const unsigned int res[2])
@@ -42,7 +31,7 @@ bool ppmWrite(const char* path, const unsigned char* data, const unsigned int re
 	return true;
 }
 
-//Writes a colour to the image data array to be saved later
+//Writes a color to the image data array to be saved later
 void writePixel(const int x, const int y, unsigned char r, unsigned char g, unsigned char b)
 {
 	unsigned int i = (y * Res[0] + x) * 3U;
@@ -105,8 +94,8 @@ HitResult TraceAll(
 	if (closestHit.hit) {
 		closestHit.pos = Vector3ToVec3(ray.origin + ray.direction * closestHit.t); // calculate position at the end rather than every object (way faster)
 
-		// The colour calc for the plane is expensive, so I moved colour calculation to a new function that gets called on the closest hit only
-		if (closestHitObject) closestHitObject->setHitColour(closestHit);
+		// The color calc for the plane is expensive, so I moved color calculation to a new function that gets called on the closest hit only
+		if (closestHitObject) closestHitObject->setHitColor(closestHit);
 	}
 
 	if (auto bvhHit = traverser.traverse(ray, intersector)) {
@@ -114,14 +103,14 @@ HitResult TraceAll(
 
 		if (intersection.t < closestHit.t) {
 			closestHit.t = intersection.t;
-			closestHit.colour = vec3(0, 255, 0); //just fucking make it green idc
+			closestHit.color = vec3(0, 255, 0); //just fucking make it green idc
 			closestHit.normal = Vector3ToVec3(triangles[bvhHit->primitive_index].n); //how do I calculate this? You calculate it using either a) the triangle's geometric normal (calculated from the edges, which I'm using here), or b) the shading normal (calculated from interpolating the vertex normals using the hit barycentrics)
 			closestHit.hit = true;
 		}
 	}
 
 	if (closestHit.hit) {
-		closestHit.colour *= calculateLighting(closestHit);
+		closestHit.color *= calculateLighting(closestHit);
 	}
 
 	return closestHit;
@@ -166,6 +155,9 @@ GMOD_MODULE_OPEN()
 	// Meshes
 	std::vector<bvh::Triangle<float>> triangles;
 
+	//let us print all da meshes
+	getAllMeshes(LUA);
+
 	// Singular Triangle 
 	triangles.emplace_back(
 		Vector3(50.f, 0.f, 10.f),
@@ -202,19 +194,23 @@ GMOD_MODULE_OPEN()
 
 			HitResult hit = TraceAll(ray, objects, triangles, traverser, intersector);
 
-			vec3 FinalColour = vec3(168.f, 219.f, 243.f);
+			vec3 FinalColor = vec3(168.f, 219.f, 243.f);
 			if (hit.hit) {
-				FinalColour = hit.colour * 255.f;
+				FinalColor = hit.color * 255.f;
 			}
 
-			writePixel(x, y, FinalColour.x, FinalColour.y, FinalColour.z);
+			writePixel(x, y, FinalColor.x, FinalColor.y, FinalColor.z);
 		}
 	}
 	
-	bool success = ppmWrite("D:\\Programming\\GitHub\\MeeBinaryTracer\\Release\\x64\\render.ppm", ImageData.data(), Res);
+	bool success = ppmWrite("C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\renders\\render7.ppm", ImageData.data(), Res);
 	if (success) {
 		double RENDER_END_TIME = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - RENDER_START_TIME).count();
 		printLua(LUA, "Finished!\nRender & Save Time: " + std::to_string(RENDER_END_TIME / 1000) + "Seconds");
+	}
+	else 
+	{
+		printLua(LUA, "File did not save correctly!");
 	}
 
 	return 0;

@@ -160,10 +160,12 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Programming\Gmod\gmod_module\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="objects.cpp" />
+    <ClCompile Include="mesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lighting.h" />
     <ClInclude Include="Main.h" />
+    <ClInclude Include="mesh.h" />
     <ClInclude Include="objects.h" />
     <ClInclude Include="types.h" />
   </ItemGroup>

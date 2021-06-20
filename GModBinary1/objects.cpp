@@ -4,7 +4,7 @@ using glm::vec3;
 using Ray = bvh::Ray<float>;
 
 #pragma region Sphere
-Sphere::Sphere(vec3 position, vec3 direction, vec3 colour, float radius) : BaseObject(position, direction, colour), rad(radius) {}
+Sphere::Sphere(vec3 position, vec3 direction, vec3 color, float radius) : BaseObject(position, direction, color), rad(radius) {}
 
 bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 {
@@ -39,14 +39,14 @@ bool Sphere::intersect(const Ray& ray, HitResult& hitOut) const
 	return true;
 }
 
-void Sphere::setHitColour(HitResult& hitDataOut) const
+void Sphere::setHitColor(HitResult& hitDataOut) const
 {
-	hitDataOut.colour = col;
+	hitDataOut.color = col;
 }
 #pragma endregion
 
 #pragma region Plane
-Plane::Plane(vec3 position, vec3 direction, vec3 colour) : BaseObject(position, direction, colour) {}
+Plane::Plane(vec3 position, vec3 direction, vec3 color) : BaseObject(position, direction, color) {}
 bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 {
 	hitOut.hit = false;
@@ -71,7 +71,7 @@ bool Plane::intersect(const Ray& ray, HitResult& hitOut) const
 	return false;
 }
 
-void Plane::setHitColour(HitResult& hitDataOut) const
+void Plane::setHitColor(HitResult& hitDataOut) const
 {
 	// https://computergraphics.stackexchange.com/questions/8382/how-do-i-convert-a-hit-on-an-infinite-plane-to-uv-coordinates-for-texturing-in-a
 	vec3 uAxis;
@@ -94,6 +94,6 @@ void Plane::setHitColour(HitResult& hitDataOut) const
 	// This produces a grid pattern by performing an XOR comparison between whether we hit the right half of the uv segment, or the bottom half
 	// In case you don't know what XOR is, it's true when either of the two booleans are true, but not when they're both true
 	bool rightHalf = u > 0.5f, bottomHalf = v > 0.5f;
-	hitDataOut.colour = col * (rightHalf != bottomHalf ? 0.9f : 0.3f); // Change the weights here depending on the look you want
+	hitDataOut.color = col * (rightHalf != bottomHalf ? 0.9f : 0.3f); // Change the weights here depending on the look you want
 }
 #pragma endregion

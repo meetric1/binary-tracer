@@ -9,14 +9,8 @@
 
 #include "types.h"
 #include "objects.h"
-
-#include <bvh/bvh.hpp>
-#include <bvh/vector.hpp>
-#include <bvh/triangle.hpp>
-#include <bvh/ray.hpp>
-#include <bvh/sweep_sah_builder.hpp>
-#include <bvh/single_ray_traverser.hpp>
-#include <bvh/primitive_intersectors.hpp>
+#include "mesh.h"
+#include "lighting.h"
 
 struct Camera
 {
