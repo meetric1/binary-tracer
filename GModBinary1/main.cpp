@@ -16,6 +16,16 @@ using Bvh = bvh::Bvh<float>;
 
 /// FUNCTIONS ///
 
+void printLua(ILuaBase* LUA, std::string text)
+{
+	LUA->PushSpecial(SPECIAL_GLOB);
+	LUA->GetField(-1, "print");
+	LUA->PushString(text.c_str());
+	LUA->Call(1, 0);
+	LUA->Pop();
+}
+
+
 // Creates and saves an image
 bool ppmWrite(const char* path, const unsigned char* data, const unsigned int res[2])
 {
@@ -116,10 +126,58 @@ HitResult TraceAll(
 	return closestHit;
 }
 
+/// Lua functions ///
+
+//pretty much stolen from the visual mesh tracer
+LUA_FUNCTION(getAllMeshes)
+{
+
+	if (LUA->Top() == 0) LUA->CreateTable();
+	else if (LUA->IsType(1, Type::Nil)) {
+		LUA->Pop(LUA->Top());
+		LUA->CreateTable();
+	}
+	else {
+		LUA->CheckType(1, Type::Table);
+		LUA->Pop(LUA->Top() - 1); // Pop all but the table
+	}
+
+	size_t numEntities = LUA->ObjLen();
+	for (size_t entIndex = 1; entIndex <= numEntities; entIndex++) {
+
+		// Get entity
+		LUA->PushNumber(entIndex);
+		LUA->GetTable(1);
+		LUA->CheckType(-1, Type::Entity);
+
+
+
+		// Get entity id
+
+		LUA->GetField(-1, "EntIndex");
+		LUA->Push(-2);	//?
+		LUA->Call(1, 1);
+		double entId = LUA->CheckNumber(); // Get as a double so after we check it's positive a static cast to unsigned int wont overflow rather than using int
+		LUA->Pop();
+
+		if (entId < 0.0) LUA->ThrowError("Entity ID is less than 0");	//why would this even run lol
+
+		// Lets print all da ents to see if the module can see them
+		printLua(LUA, std::to_string(entId));
+
+		LUA->Pop();
+
+
+	}
+	
+	return 0;
+}
+
+
 // Called when the module is loaded
 GMOD_MODULE_OPEN()
 {
-	/// Variable creation ///
+	printLua(LUA, "Opened Module");
 
 	// Time to see how long the render took
 	std::chrono::steady_clock::time_point RENDER_START_TIME = std::chrono::high_resolution_clock::now();
@@ -156,7 +214,10 @@ GMOD_MODULE_OPEN()
 	std::vector<bvh::Triangle<float>> triangles;
 
 	//let us print all da meshes
-	getAllMeshes(LUA);
+	//broken, doesnt print anything??
+	LUA->PushSpecial(SPECIAL_GLOB);
+		LUA->PushCFunction(getAllMeshes);
+	LUA->Pop();
 
 	// Singular Triangle 
 	triangles.emplace_back(
