@@ -71,11 +71,11 @@ std::string vec2string(vec3 v)
 	return std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z);
 }
 
-Vector3 Vec3ToVector3(const vec3& vec)	//shit function name but whatever lol
+Vector3 vec3ToVector3(const vec3& vec)	//shit function name but whatever lol
 {
 	return Vector3(vec.x, vec.y, vec.z);
 }
-vec3 Vector3ToVec3(const Vector3& vec)
+vec3 vector3ToVec3(const Vector3& vec)
 {
 	return vec3(vec[0], vec[1], vec[2]);
 }
@@ -102,7 +102,7 @@ HitResult TraceAll(
 	}
 
 	if (closestHit.hit) {
-		closestHit.pos = Vector3ToVec3(ray.origin + ray.direction * closestHit.t); // calculate position at the end rather than every object (way faster)
+		closestHit.pos = vector3ToVec3(ray.origin + ray.direction * closestHit.t); // calculate position at the end rather than every object (way faster)
 
 		// The color calc for the plane is expensive, so I moved color calculation to a new function that gets called on the closest hit only
 		if (closestHitObject) closestHitObject->setHitColor(closestHit);
@@ -114,7 +114,7 @@ HitResult TraceAll(
 		if (intersection.t < closestHit.t) {
 			closestHit.t = intersection.t;
 			closestHit.color = vec3(0, 255, 0); //just fucking make it green idc
-			closestHit.normal = Vector3ToVec3(triangles[bvhHit->primitive_index].n); //how do I calculate this? You calculate it using either a) the triangle's geometric normal (calculated from the edges, which I'm using here), or b) the shading normal (calculated from interpolating the vertex normals using the hit barycentrics)
+			closestHit.normal = vector3ToVec3(triangles[bvhHit->primitive_index].n); //how do I calculate this? You calculate it using either a) the triangle's geometric normal (calculated from the edges, which I'm using here), or b) the shading normal (calculated from interpolating the vertex normals using the hit barycentrics)
 			closestHit.hit = true;
 		}
 	}
@@ -131,6 +131,8 @@ HitResult TraceAll(
 //pretty much stolen from the visual mesh tracer
 LUA_FUNCTION(getAllMeshes)
 {
+
+	// First thing to be passed is all the entities
 
 	if (LUA->Top() == 0) LUA->CreateTable();
 	else if (LUA->IsType(1, Type::Nil)) {
@@ -149,8 +151,6 @@ LUA_FUNCTION(getAllMeshes)
 		LUA->PushNumber(entIndex);
 		LUA->GetTable(1);
 		LUA->CheckType(-1, Type::Entity);
-
-
 
 		// Get entity id
 
@@ -177,7 +177,6 @@ LUA_FUNCTION(getAllMeshes)
 // Called when the module is loaded
 GMOD_MODULE_OPEN()
 {
-	printLua(LUA, "Opened Module");
 
 	// Time to see how long the render took
 	std::chrono::steady_clock::time_point RENDER_START_TIME = std::chrono::high_resolution_clock::now();
@@ -214,10 +213,7 @@ GMOD_MODULE_OPEN()
 	std::vector<bvh::Triangle<float>> triangles;
 
 	//let us print all da meshes
-	//broken, doesnt print anything??
-	LUA->PushSpecial(SPECIAL_GLOB);
-		LUA->PushCFunction(getAllMeshes);
-	LUA->Pop();
+
 
 	// Singular Triangle 
 	triangles.emplace_back(
@@ -237,9 +233,19 @@ GMOD_MODULE_OPEN()
 	auto intersector = bvh::ClosestPrimitiveIntersector<Bvh, Triangle>(accelStruct, triangles.data());
 	auto traverser = bvh::SingleRayTraverser<Bvh>(accelStruct);
 
+
+	// Get Meshes function
+
+	LUA->PushSpecial(SPECIAL_GLOB);		// Push _G to top of stack
+	LUA->PushCFunction(getAllMeshes);	// Push getAllMeshes function to top of stack
+	LUA->SetField(-2, "getAllMeshes");	// Puts getallmeshes inside G as _G.getAllMeshes, pops the function
+	LUA->Pop();							// Pop _G
+
+
 	/// Actual Tracing ///
 	float scale = tan(deg2rad(Cam.fov * 0.5f));
 	float imageAspectRatio = Res[0] / static_cast<float>(Res[1]);
+
 	for (unsigned int y = 0U; y < Res[1]; y++) {
 		for (unsigned int x = 0U; x < Res[0]; x++) {
 			//Fov calc
@@ -247,8 +253,8 @@ GMOD_MODULE_OPEN()
 			float yDir = (1.f - 2.f * (y + 0.5f) / static_cast<float>(Res[1])) * scale;
 
 			Ray ray{
-				Vec3ToVector3(viewMatrix * glm::vec4(0.f, 0.f, 0.f, 1.f)),
-				Vec3ToVector3(viewMatrix * glm::vec4(-yDir, -1, xDir, 0.f)),
+				vec3ToVector3(viewMatrix * glm::vec4(0.f, 0.f, 0.f, 1.f)),
+				vec3ToVector3(viewMatrix * glm::vec4(-yDir, -1, xDir, 0.f)),
 				0.f,
 				FLT_MAX
 			};
