@@ -131,7 +131,7 @@ HitResult TraceAll(
 //pretty much stolen from the visual mesh tracer
 LUA_FUNCTION(getAllMeshes)
 {
-
+	printLua(LUA, "FUNCTION STARTED");
 	// First thing to be passed is all the entities
 
 	if (LUA->Top() == 0) LUA->CreateTable();
@@ -145,27 +145,10 @@ LUA_FUNCTION(getAllMeshes)
 	}
 
 	size_t numEntities = LUA->ObjLen();
+	printLua(LUA, std::to_string(numEntities));
 	for (size_t entIndex = 1; entIndex <= numEntities; entIndex++) {
+		printLua(LUA, std::to_string(entIndex));
 
-		// Get entity
-		LUA->PushNumber(entIndex);
-		LUA->GetTable(1);
-		LUA->CheckType(-1, Type::Entity);
-
-		// Get entity id
-
-		LUA->GetField(-1, "EntIndex");
-		LUA->Push(-2);	//?
-		LUA->Call(1, 1);
-		double entId = LUA->CheckNumber(); // Get as a double so after we check it's positive a static cast to unsigned int wont overflow rather than using int
-		LUA->Pop();
-
-		if (entId < 0.0) LUA->ThrowError("Entity ID is less than 0");	//why would this even run lol
-
-		// Lets print all da ents to see if the module can see them
-		printLua(LUA, std::to_string(entId));
-
-		LUA->Pop();
 
 
 	}
