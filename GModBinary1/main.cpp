@@ -71,13 +71,18 @@ std::string vec2string(vec3 v)
 	return std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z);
 }
 
-Vector3 vec3ToVector3(const vec3& vec)	//shit function name but whatever lol
+Vector3 vec3ToVector3(const vec3& vec)		//these function names lmao
 {
 	return Vector3(vec.x, vec.y, vec.z);
 }
 vec3 vector3ToVec3(const Vector3& vec)
 {
 	return vec3(vec[0], vec[1], vec[2]);
+}
+
+Vector3 vectorToVector3(const Vector& vec)
+{
+	return Vector3(vec.x, vec.y, vec.z);
 }
 
 
@@ -126,104 +131,13 @@ HitResult TraceAll(
 	return closestHit;
 }
 
-/// Lua functions ///
 
-//pretty much stolen from the visual mesh tracer
-LUA_FUNCTION(getAllMeshes)
-{
-	printLua(LUA, "FUNCTION STARTED");
-	// First thing to be passed is all the entities
-
-	if (LUA->Top() == 0) LUA->CreateTable();
-	else if (LUA->IsType(1, Type::Nil)) {
-		LUA->Pop(LUA->Top());
-		LUA->CreateTable();
-	}
-	else {
-		LUA->CheckType(1, Type::Table);
-		LUA->Pop(LUA->Top() - 1); // Pop all but the table
-	}
-
-	size_t numEntities = LUA->ObjLen();
-	printLua(LUA, std::to_string(numEntities));
-	for (size_t entIndex = 1; entIndex <= numEntities; entIndex++) {
-		printLua(LUA, std::to_string(entIndex));
-
-
-
-	}
-	
-	return 0;
-}
-
-
-// Called when the module is loaded
-GMOD_MODULE_OPEN()
-{
-
-	// Time to see how long the render took
-	std::chrono::steady_clock::time_point RENDER_START_TIME = std::chrono::high_resolution_clock::now();
-
-	// Resolution
-	Res[0] = 1920; // X res
-	Res[1] = 1080; // Y res
-	
-	ImageData = std::vector<unsigned char>(Res[0] * Res[1] * 3U, 0);
-
-	// Camera
-	Camera Cam{ vec3(0.f, 0.f, 0.f), normalize(vec3(1.f, 0.f, 0.f)), 90U };
-
-	// Hard coded everything here as you're gonna need the proper up and target vectors in from GLua
-	glm::mat4 viewMatrix = glm::lookAt(
-		vec3(0.f), // Camera position,
-		vec3(1.f, 0.f, 0.f), // Target position (the position the camera is looking at, you'll use cam pos + cam dir from lua)
-		vec3(0.f, 0.f, 1.f) // Up vector (you'll use the eyeang's up vector from lua)
-	);
-
-	// Primitive objects
-	std::vector<std::shared_ptr<BaseObject>> objects;
-	{
-		Plane p(vec3(0.f, 0.f, -10.f), vec3(0.f, 0.f, 1.f), vec3(1.f, 0.8f, 0.2f));
-		objects.push_back(std::make_shared<Plane>(p));
-	}
-
-	for(int i = 0; i < 10; i++) {
-		Sphere s{ vec3(sin(deg2rad(i * 36)) * 10.f + 25.f, cos(deg2rad(i * 36)) * 10.f, -5.f), vec3(), vec3(static_cast<float>(i) / 10.f), 3.f};
-		objects.push_back(std::make_shared<Sphere>(s));
-	}
-
-	// Meshes
-	std::vector<bvh::Triangle<float>> triangles;
-
-	//let us print all da meshes
-
-
-	// Singular Triangle 
-	triangles.emplace_back(
-		Vector3(50.f, 0.f, 10.f),
-		Vector3(50.f, -100.f, -10.f),
-		Vector3(50.f, 100.f, -10.f)
-	);
-
-
-	// Build acceleration structure
-	Bvh accelStruct = Bvh();
-	bvh::SweepSahBuilder<Bvh> builder(accelStruct);
-	auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(triangles.data(), triangles.size());
-	auto global_bbox = bvh::compute_bounding_boxes_union(bboxes.get(), triangles.size());
-	builder.build(global_bbox, bboxes.get(), centers.get(), triangles.size());
-
-	auto intersector = bvh::ClosestPrimitiveIntersector<Bvh, Triangle>(accelStruct, triangles.data());
-	auto traverser = bvh::SingleRayTraverser<Bvh>(accelStruct);
-
-
-	// Get Meshes function
-
-	LUA->PushSpecial(SPECIAL_GLOB);		// Push _G to top of stack
-	LUA->PushCFunction(getAllMeshes);	// Push getAllMeshes function to top of stack
-	LUA->SetField(-2, "getAllMeshes");	// Puts getallmeshes inside G as _G.getAllMeshes, pops the function
-	LUA->Pop();							// Pop _G
-
+void RenderAll(
+	ILuaBase* LUA, 
+	const std::vector<std::shared_ptr<BaseObject>>& objects, 
+	const std::vector<bvh::Triangle<float>>& triangles,
+	const bvh::SingleRayTraverser<Bvh>& traverser, 
+	const bvh::ClosestPrimitiveIntersector<Bvh, Triangle>& intersector){
 
 	/// Actual Tracing ///
 	float scale = tan(deg2rad(Cam.fov * 0.5f));
@@ -252,16 +166,131 @@ GMOD_MODULE_OPEN()
 			writePixel(x, y, FinalColor.x, FinalColor.y, FinalColor.z);
 		}
 	}
-	
+
 	bool success = ppmWrite("C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\renders\\render7.ppm", ImageData.data(), Res);
 	if (success) {
 		double RENDER_END_TIME = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - RENDER_START_TIME).count();
 		printLua(LUA, "Finished!\nRender & Save Time: " + std::to_string(RENDER_END_TIME / 1000) + "Seconds");
 	}
-	else 
+	else
 	{
 		printLua(LUA, "File did not save correctly!");
 	}
+
+}
+
+
+
+
+/// Lua functions ///
+
+//pretty much stolen from the visual mesh tracer
+LUA_FUNCTION(getAllMeshes)
+{
+	printLua(LUA, "FUNCTION STARTED");
+	// First thing to be passed is all the entities
+
+	if (LUA->Top() == 0) LUA->CreateTable();
+	else if (LUA->IsType(1, Type::Nil)) {
+		LUA->Pop(LUA->Top());
+		LUA->CreateTable();
+	}
+	else {
+		LUA->CheckType(1, Type::Table);
+		LUA->Pop(LUA->Top() - 1); // Pop all but the table
+	}
+
+	size_t tris = LUA->ObjLen();
+
+	std::vector<bvh::Triangle<float>> triangles;
+	printLua(LUA, std::to_string(tris));
+
+	//loop thru all meshes
+	for (size_t meshId = 1; meshId <= tris; meshId++) {
+
+		LUA->PushNumber(meshId);	//push the current mesh id in the triangles table (the one on the stack)
+		LUA->GetTable(-2);			//the get
+
+		LUA->GetField(-1, "triangles");		//the triangles on the stack of the table
+
+		size_t verts = LUA->ObjLen();
+
+		Vector3	tri[3];
+
+		//loop thru all tris
+		for (size_t vertId = 1; vertId <= verts; vertId++) {
+
+			LUA->PushNumber(vertId + 1U);
+			LUA->GetTable(-2);
+
+			LUA->GetField(-1, "pos");
+			Vector triPos = LUA->GetVector();
+			LUA->Pop();
+
+			size_t triId = vertId % 3U;
+			tri[triId] = vectorToVector3(triPos);
+			if (triId == 2U) {
+				Triangle builtTri(tri[0], tri[1], tri[2]);
+				triangles.push_back(builtTri);
+			}
+
+		}
+	}
+
+	Bvh accelStruct = Bvh();
+	bvh::SweepSahBuilder<Bvh> builder(accelStruct);
+	auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(triangles.data(), triangles.size());
+	auto global_bbox = bvh::compute_bounding_boxes_union(bboxes.get(), triangles.size());
+	builder.build(global_bbox, bboxes.get(), centers.get(), triangles.size());
+
+	auto intersector = bvh::ClosestPrimitiveIntersector<Bvh, Triangle>(accelStruct, triangles.data());
+	auto traverser = bvh::SingleRayTraverser<Bvh>(accelStruct);
+
+	RenderAll(LUA, objects, triangles, traverser, intersector);
+	
+	return 0;
+}
+
+/// Variables and stuff ////
+
+// Time to see how long the render took
+std::chrono::steady_clock::time_point RENDER_START_TIME = std::chrono::high_resolution_clock::now();
+
+// Resolution
+int Res[2]{1920, 1080};	//X, Y
+
+std::vector ImageData = std::vector<unsigned char>(Res[0] * Res[1] * 3U, 0);
+
+// Camera
+Camera Cam{ vec3(0.f, 0.f, 0.f), normalize(vec3(1.f, 0.f, 0.f)), 90U };
+
+// Hard coded everything here as you're gonna need the proper up and target vectors in from GLua
+glm::mat4 viewMatrix = glm::lookAt(
+	vec3(0.f), // Camera position,
+	vec3(1.f, 0.f, 0.f), // Target position (the position the camera is looking at, you'll use cam pos + cam dir from lua)
+	vec3(0.f, 0.f, 1.f) // Up vector (you'll use the eyeang's up vector from lua)
+);
+
+// Primitive objects
+std::vector<std::shared_ptr<BaseObject>> objects;
+{
+	Plane p(vec3(0.f, 0.f, -10.f), vec3(0.f, 0.f, 1.f), vec3(1.f, 0.8f, 0.2f));
+	objects.push_back(std::make_shared<Plane>(p));
+}
+
+for (int i = 0; i < 10; i++) {
+	Sphere s{ vec3(sin(deg2rad(i * 36)) * 10.f + 25.f, cos(deg2rad(i * 36)) * 10.f, -5.f), vec3(), vec3(static_cast<float>(i) / 10.f), 3.f };
+	objects.push_back(std::make_shared<Sphere>(s));
+}
+
+// Called when the module is loaded
+GMOD_MODULE_OPEN()
+{
+
+	LUA->PushSpecial(SPECIAL_GLOB);		// Push _G to top of stack
+	LUA->PushCFunction(getAllMeshes);	// Push getAllMeshes function to top of stack
+	LUA->SetField(-2, "getAllMeshes");	// Puts getallmeshes inside G as _G.getAllMeshes, pops the function
+	LUA->Pop();							// Pop _G
 
 	return 0;
 }
